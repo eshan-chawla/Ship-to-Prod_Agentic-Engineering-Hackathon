@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ghost
+      POSTGRES_PASSWORD: ghost
+      POSTGRES_DB: market_os
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghost -d market_os"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../apps/api
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://ghost:ghost@postgres:5432/market_os}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      DEV_AUTH_EMAIL: ${DEV_AUTH_EMAIL:-demo@market-os.local}
+      DEV_AUTH_PASSWORD: ${DEV_AUTH_PASSWORD:-demo-password}
+      TINYFISH_API_KEY: ${TINYFISH_API_KEY:-}
+      TINYFISH_BASE_URL: ${TINYFISH_BASE_URL:-https://api.tinyfish.io}
+      RISK_ALERT_THRESHOLD: ${RISK_ALERT_THRESHOLD:-70}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://ghost:ghost@postgres:5432/market_os}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      TINYFISH_API_KEY: ${TINYFISH_API_KEY:-}
+      TINYFISH_BASE_URL: ${TINYFISH_BASE_URL:-https://api.tinyfish.io}
+      RISK_ALERT_THRESHOLD: ${RISK_ALERT_THRESHOLD:-70}
+      PYTHONPATH: /workspace/apps/api
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../apps/web
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
