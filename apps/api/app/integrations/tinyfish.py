@@ -21,6 +21,8 @@ RISK_KEYWORDS = {
     "geopolitical": ["tariff", "border", "war", "instability", "export control", "trade restriction"],
 }
 
+MAX_EVIDENCE_CHARS = 700
+
 
 class TinyFishError(RuntimeError):
     def __init__(self, operation: str, message: str, status_code: int | None = None) -> None:
@@ -346,15 +348,21 @@ def normalize_agent_response(payload: dict[str, Any], task: str) -> dict[str, An
 
 def build_supplier_evidence_payload(result: dict[str, Any], fetched: dict[str, Any]) -> dict[str, Any]:
     title = fetched.get("title") or result.get("title") or "Untitled source"
-    content = fetched.get("content") or result.get("snippet") or ""
-    risk_factor = result.get("risk_factor") or infer_risk_factor(title, content, result.get("snippet"))
+    full_content = fetched.get("content") or result.get("snippet") or ""
+    snippet = result.get("snippet", "")
+    content = summarize_evidence_text(title, snippet, full_content)
+    risk_factor = result.get("risk_factor") or infer_risk_factor(title, content, snippet)
     return {
         "title": title,
         "content": content,
-        "snippet": result.get("snippet", ""),
+        "snippet": snippet,
         "risk_factor": risk_factor,
         "url": fetched.get("final_url") or fetched.get("url") or result["url"],
-        "raw_payload": {"search_result": result.get("raw_payload", result), "fetched": fetched.get("raw_payload", fetched)},
+        "raw_payload": {
+            "search_result": result.get("raw_payload", result),
+            "fetched": fetched.get("raw_payload", fetched),
+            "full_content_chars": len(full_content),
+        },
     }
 
 
@@ -383,6 +391,64 @@ def stringify_content(value: Any) -> str:
     if isinstance(value, str):
         return value
     return str(value)
+
+
+def summarize_evidence_text(title: str, snippet: str, full_content: str) -> str:
+    cleaned = clean_text(full_content)
+    if not cleaned:
+        return clean_text(snippet)[:MAX_EVIDENCE_CHARS]
+
+    sentences = split_sentences(cleaned)
+    ranked = sorted(
+        enumerate(sentences[:80]),
+        key=lambda pair: (sentence_signal_score(pair[1], title, snippet), -pair[0]),
+        reverse=True,
+    )
+    selected: list[str] = []
+    for _index, sentence in ranked:
+        if sentence_signal_score(sentence, title, snippet) <= 0 and selected:
+            continue
+        if sentence not in selected:
+            selected.append(sentence)
+        if len(" ".join(selected)) >= MAX_EVIDENCE_CHARS or len(selected) >= 4:
+            break
+
+    if not selected:
+        selected = sentences[:3]
+    summary = " ".join(selected)
+    if snippet and snippet.lower() not in summary.lower():
+        summary = f"{clean_text(snippet)} {summary}"
+    return truncate_text(summary, MAX_EVIDENCE_CHARS)
+
+
+def clean_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
+def split_sentences(value: str) -> list[str]:
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", value) if part.strip()]
+    return sentences or ([value] if value else [])
+
+
+def sentence_signal_score(sentence: str, title: str, snippet: str) -> int:
+    text = sentence.lower()
+    score = 0
+    for keywords in RISK_KEYWORDS.values():
+        for keyword in keywords:
+            if keyword_matches(text, keyword):
+                score += 3 if " " in keyword else 2
+    context = f"{title} {snippet}".lower()
+    for token in set(re.findall(r"\b[a-z]{5,}\b", context)):
+        if token in text:
+            score += 1
+    return score
+
+
+def truncate_text(value: str, limit: int) -> str:
+    value = clean_text(value)
+    if len(value) <= limit:
+        return value
+    return value[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;:") + "…"
 
 
 def coerce_price(value: Any) -> float:

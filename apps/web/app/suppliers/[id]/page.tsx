@@ -37,7 +37,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 <a href={item.source_url} className="font-black underline">{item.source_title}</a>
                 <span className="text-xs font-black uppercase text-ink/55">{dateTime(item.captured_at)}</span>
               </div>
-              <p className="mt-2 text-sm font-semibold text-ink/75">{item.content}</p>
+              <p className="mt-2 text-sm font-semibold text-ink/75">{truncateEvidence(item.content)}</p>
               {item.risk_factor ? <p className="mt-2 inline-block bg-brass px-2 py-1 text-xs font-black uppercase">{item.risk_factor.replaceAll("_", " ")}</p> : null}
             </article>
           )) : <EmptyState title="No evidence captured" body="Evidence items are stored raw from TinyFish search, fetch, and browser extraction calls." />}
@@ -47,3 +47,9 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
   );
 }
 
+function truncateEvidence(value: string) {
+  if (value.length <= 760) {
+    return value;
+  }
+  return `${value.slice(0, 740).trim()}...`;
+}

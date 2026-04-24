@@ -7,10 +7,10 @@ setup:
 dev: up
 
 up:
-	docker compose -f infra/docker-compose.yml up --build
+	docker compose --env-file .env -f infra/docker-compose.yml up --build
 
 down:
-	docker compose -f infra/docker-compose.yml down
+	docker compose --env-file .env -f infra/docker-compose.yml down
 
 seed:
 	cd apps/api && .venv/bin/python -m app.scripts.seed

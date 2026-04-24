@@ -24,3 +24,21 @@ def test_pricing_recommends_promo_when_competitors_discount_below_target() -> No
     assert result["action"] == "launch promo"
     assert result["confidence"] > 0.6
 
+
+def test_supplier_scoring_scores_multiple_factors_from_same_evidence() -> None:
+    evidence = [
+        {
+            "title": "Supplier update",
+            "content": "Cash flow pressure, regulatory compliance review, port delay, and tariff risk were all reported.",
+            "snippet": "Supplier has multiple risk signals.",
+            "risk_factor": "financial_stress",
+        }
+    ]
+
+    result = score_risk_evidence(evidence, criticality="high")
+
+    assert result["factors"]["financial_stress"] > 0
+    assert result["factors"]["legal_regulatory"] > 0
+    assert result["factors"]["delivery_disruption"] > 0
+    assert result["factors"]["geopolitical"] > 0
+    assert "Top contributing factors" in result["explanation"]

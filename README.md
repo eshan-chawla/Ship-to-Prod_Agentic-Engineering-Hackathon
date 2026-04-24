@@ -28,7 +28,7 @@ make up
 3. Seed demo data in another shell:
 
 ```bash
-docker compose -f infra/docker-compose.yml exec api python -m app.scripts.seed
+docker compose --env-file .env -f infra/docker-compose.yml exec api python -m app.scripts.seed
 ```
 
 4. Open:
@@ -97,5 +97,5 @@ To test real mode locally:
 cp .env.example .env
 # edit .env and set TINYFISH_API_KEY
 make up
-docker compose -f infra/docker-compose.yml exec api python -m app.scripts.seed
+docker compose --env-file .env -f infra/docker-compose.yml exec api python -m app.scripts.seed
 ```
