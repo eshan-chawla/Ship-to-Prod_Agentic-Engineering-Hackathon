@@ -123,6 +123,14 @@ def seed() -> None:
                     sentiment=0,
                     cybersecurity=42,
                     geopolitical=0,
+                    factor_details={
+                        "financial_stress": {"score": 29, "confidence": 0.33, "evidence_ids": []},
+                        "legal_regulatory": {"score": 0, "confidence": 0.0, "evidence_ids": []},
+                        "delivery_disruption": {"score": 53, "confidence": 0.67, "evidence_ids": []},
+                        "sentiment": {"score": 0, "confidence": 0.0, "evidence_ids": []},
+                        "cybersecurity": {"score": 42, "confidence": 0.33, "evidence_ids": []},
+                        "geopolitical": {"score": 0, "confidence": 0.0, "evidence_ids": []},
+                    },
                     explanation="Risk score 82/100 is driven by delivery disruption and cybersecurity evidence in mock sources.",
                 ),
                 Alert(
@@ -139,7 +147,13 @@ def seed() -> None:
             [
                 PriceObservation(product_id=products[0].id, competitor_url_id=competitors[0].id, competitor_name="RetailHub", url=competitors[0].url, price=119.99, stock_status="in_stock", promo_signal="discount", raw_payload={"provider": "mock"}),
                 PriceObservation(product_id=products[0].id, competitor_url_id=competitors[1].id, competitor_name="DepotMart", url=competitors[1].url, price=124.5, stock_status="in_stock", promo_signal="none", raw_payload={"provider": "mock"}),
-                PriceRecommendation(product_id=products[0].id, action="launch promo", confidence=0.82, explanation="Target price $129.00 is above average in-stock competitor price $122.25 and one competitor is discounting."),
+                PriceRecommendation(
+                    product_id=products[0].id,
+                    action="LAUNCH_PROMO",
+                    confidence=0.82,
+                    expected_impact="Match 1 competitor promo signal(s); expect short-term volume lift.",
+                    explanation="Target price $129.00 is above average in-stock competitor price $122.25 and one competitor is discounting.",
+                ),
                 EvidenceItem(entity_type="product", entity_id=products[0].id, source_url=competitors[0].url, source_title="RetailHub listing", content="Mock extraction found $119.99 with discount signal.", evidence_type="price_signal", raw_payload={"provider": "mock"}),
                 Alert(entity_type="product", entity_id=products[0].id, severity="medium", title="Promo pressure detected", message="RetailHub is discounting Smart Thermostat Pro below target price."),
                 AuditLog(agent_run_id=run1.id, event_type="tool_use", message="Used tinyfish.search_web", payload={"provider": "mock"}),

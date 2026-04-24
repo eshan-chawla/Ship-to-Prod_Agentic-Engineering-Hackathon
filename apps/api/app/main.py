@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
+from app.api.voice_routes import router as voice_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import create_db_and_tables
@@ -26,3 +27,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(router)
+app.include_router(voice_router)

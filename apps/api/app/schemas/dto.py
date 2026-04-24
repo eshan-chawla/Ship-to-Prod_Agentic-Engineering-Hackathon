@@ -17,6 +17,12 @@ class SupplierRead(SupplierCreate):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FactorDetail(BaseModel):
+    score: int
+    confidence: float
+    evidence_ids: list[int] = Field(default_factory=list)
+
+
 class SupplierRiskRead(BaseModel):
     id: int
     supplier_id: int
@@ -28,6 +34,7 @@ class SupplierRiskRead(BaseModel):
     sentiment: int
     cybersecurity: int
     geopolitical: int
+    factor_details: dict[str, FactorDetail] = Field(default_factory=dict)
     explanation: str
     created_at: datetime
 
@@ -81,6 +88,7 @@ class PriceRecommendationRead(BaseModel):
     product_id: int
     action: str
     explanation: str
+    expected_impact: str | None = None
     confidence: float
     created_at: datetime
 

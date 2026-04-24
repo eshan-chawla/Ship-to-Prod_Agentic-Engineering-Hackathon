@@ -60,20 +60,21 @@ def run_supplier_scan(
                 fetched = provider.fetch_url(result["url"])
                 redis_context.set_json(fetched_key, fetched, ttl_seconds=3600)
             payload = build_supplier_evidence_payload(result, fetched)
-            evidence_payloads.append(payload)
-            session.add(
-                EvidenceItem(
-                    entity_type="supplier",
-                    entity_id=supplier_id,
-                    scan_id=scan.id,
-                    source_url=payload["url"],
-                    source_title=payload["title"],
-                    content=payload["content"],
-                    evidence_type="risk_signal",
-                    risk_factor=payload["risk_factor"],
-                    raw_payload=payload["raw_payload"],
-                )
+            item = EvidenceItem(
+                entity_type="supplier",
+                entity_id=supplier_id,
+                scan_id=scan.id,
+                source_url=payload["url"],
+                source_title=payload["title"],
+                content=payload["content"],
+                evidence_type="risk_signal",
+                risk_factor=payload["risk_factor"],
+                raw_payload=payload["raw_payload"],
             )
+            session.add(item)
+            session.flush()
+            payload["id"] = item.id
+            evidence_payloads.append(payload)
 
         scoring = score_risk_evidence(evidence_payloads, supplier.criticality)
         factors = scoring["factors"]
@@ -87,6 +88,7 @@ def run_supplier_scan(
             sentiment=factors["sentiment"],
             cybersecurity=factors["cybersecurity"],
             geopolitical=factors["geopolitical"],
+            factor_details=scoring["factor_details"],
             explanation=scoring["explanation"],
         )
         session.add(risk)

@@ -8,6 +8,12 @@ export type Supplier = {
   created_at: string;
 };
 
+export type FactorDetail = {
+  score: number;
+  confidence: number;
+  evidence_ids: number[];
+};
+
 export type SupplierRisk = {
   id: number;
   supplier_id: number;
@@ -19,6 +25,7 @@ export type SupplierRisk = {
   sentiment: number;
   cybersecurity: number;
   geopolitical: number;
+  factor_details: Record<string, FactorDetail>;
   explanation: string;
   created_at: string;
 };
@@ -53,14 +60,35 @@ export type PriceObservation = {
   observed_at: string;
 };
 
+export type PricingAction =
+  | "HOLD_PRICE"
+  | "LOWER_PRICE"
+  | "RAISE_PRICE"
+  | "LAUNCH_PROMO"
+  | "INVESTIGATE"
+  | string;
+
 export type PriceRecommendation = {
   id: number;
   product_id: number;
-  action: string;
+  action: PricingAction;
   explanation: string;
+  expected_impact: string | null;
   confidence: number;
   created_at: string;
 };
+
+export const PRICING_ACTION_LABELS: Record<string, string> = {
+  HOLD_PRICE: "Hold price",
+  LOWER_PRICE: "Lower price",
+  RAISE_PRICE: "Raise price",
+  LAUNCH_PROMO: "Launch promo",
+  INVESTIGATE: "Investigate",
+};
+
+export function pricingActionLabel(action: string): string {
+  return PRICING_ACTION_LABELS[action] ?? action;
+}
 
 export type Alert = {
   id: number;

@@ -65,6 +65,7 @@ class SupplierRiskScore(SQLModel, table=True):
     sentiment: int = Field(default=0)
     cybersecurity: int = Field(default=0)
     geopolitical: int = Field(default=0)
+    factor_details: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     explanation: str
     created_at: datetime = Field(default_factory=utc_now)
 
@@ -113,6 +114,7 @@ class PriceRecommendation(SQLModel, table=True):
     product_id: int = Field(index=True, foreign_key="products.id")
     action: str
     explanation: str
+    expected_impact: str | None = None
     confidence: float = Field(default=0.75)
     created_at: datetime = Field(default_factory=utc_now)
 

@@ -67,6 +67,39 @@ make api-test
 - Ghost.build/Postgres is configured through `DATABASE_URL`.
 - Redis queue/context logic is isolated in `apps/api/app/integrations/redis_context.py` and `apps/api/app/services/queues.py`.
 - Guild.ai is represented by `apps/api/app/integrations/governance.py`; it currently records to local DB tables and includes TODOs for real run tracking.
+- Vapi voice assistant lives at `apps/api/app/integrations/vapi.py` + `apps/api/app/api/voice_routes.py`. Mock mode is the default — no Vapi account needed for local dev.
+
+## Voice Assistant (Vapi)
+
+A Vapi voice assistant can answer "What suppliers are high risk today?", "Why did Supplier X's risk score increase?", "What pricing changes do you recommend today?", and "Alert me if a competitor undercuts us."
+
+Four REST tools and one webhook envelope:
+
+| Endpoint | Answers |
+| --- | --- |
+| `GET /voice/high-risk-suppliers` | High-risk suppliers, top 3 |
+| `GET /voice/supplier/{id}/summary` | Risk score, trend, top driver, open alerts |
+| `GET /voice/pricing/recommendations` | Top 3 pricing calls (prioritizes promos/changes over holds) |
+| `POST /voice/subscribe-alert` | Stores an alert subscription in Redis |
+| `POST /voice/webhook` | Vapi tool-call envelope dispatcher |
+
+All return `{"spoken": "<voice-friendly text>", "data": <structured>}`. Full tool schemas, signature verification, and Vapi dashboard setup are in [docs/vapi-tools.md](docs/vapi-tools.md).
+
+Environment:
+
+```bash
+VAPI_API_KEY=              # optional
+VAPI_WEBHOOK_SECRET=       # optional — set with VAPI_MOCK_MODE=false to enforce HMAC
+VAPI_MOCK_MODE=true        # default — accepts unsigned webhook requests
+```
+
+Quick local check (stack must be up):
+
+```bash
+curl http://localhost:8000/voice/high-risk-suppliers
+curl http://localhost:8000/voice/supplier/1/summary
+curl http://localhost:8000/voice/pricing/recommendations
+```
 
 ## TinyFish Configuration
 

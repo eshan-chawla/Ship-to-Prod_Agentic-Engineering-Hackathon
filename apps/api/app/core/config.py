@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     tinyfish_timeout_seconds: float = Field(default=20.0, gt=0)
     tinyfish_max_retries: int = Field(default=2, ge=0, le=5)
     risk_alert_threshold: int = Field(default=70, ge=0, le=100)
+    vapi_api_key: str | None = None
+    vapi_webhook_secret: str | None = None
+    vapi_mock_mode: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

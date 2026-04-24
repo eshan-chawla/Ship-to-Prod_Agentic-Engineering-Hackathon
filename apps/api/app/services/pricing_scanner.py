@@ -69,11 +69,20 @@ def run_price_scan(
                 )
             )
 
-        rec = recommend_price(product.target_price, product.target_margin, observations)
+        trend_prices = [
+            float(obs.price)
+            for obs in session.exec(
+                select(PriceObservation)
+                .where(PriceObservation.product_id == product_id)
+                .order_by(PriceObservation.observed_at)
+            ).all()
+        ]
+        rec = recommend_price(product.target_price, product.target_margin, observations, trend=trend_prices or None)
         recommendation = PriceRecommendation(
             product_id=product_id,
             action=rec["action"],
             explanation=rec["explanation"],
+            expected_impact=rec.get("expected_impact"),
             confidence=rec["confidence"],
         )
         session.add(recommendation)

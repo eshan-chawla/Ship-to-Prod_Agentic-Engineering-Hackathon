@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MetricCard } from "@/components/MetricCard";
-import { apiGet, Dashboard, dateTime } from "@/lib/api";
+import { apiGet, Dashboard, dateTime, pricingActionLabel } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
           <div className="mt-5 space-y-3">
             {data.latest_recommendations.map((rec) => (
               <Link key={rec.id} href={`/products/${rec.product_id}`} className="block border-2 border-ink bg-[#fffaf0] p-4 hover:bg-moss/20">
-                <p className="text-lg font-black capitalize">{rec.action}</p>
+                <p className="text-lg font-black">{pricingActionLabel(rec.action)}</p>
                 <p className="mt-1 text-sm font-semibold text-ink/70">{rec.explanation}</p>
               </Link>
             ))}

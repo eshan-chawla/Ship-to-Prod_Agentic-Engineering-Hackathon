@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CompetitorForm, ScanButton } from "@/components/Forms";
 import { EmptyState } from "@/components/EmptyState";
-import { apiGet, CompetitorUrl, dateTime, Evidence, money, PriceObservation, PriceRecommendation, Product } from "@/lib/api";
+import { apiGet, CompetitorUrl, dateTime, Evidence, money, PriceObservation, PriceRecommendation, pricingActionLabel, Product } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <div className="mt-4 space-y-3">
             {recommendations.length ? recommendations.map((rec) => (
               <article key={rec.id} className="border-2 border-ink bg-brass/25 p-4">
-                <p className="text-2xl font-black capitalize">{rec.action}</p>
+                <p className="text-2xl font-black">{pricingActionLabel(rec.action)}</p>
+                {rec.expected_impact ? (
+                  <p className="mt-1 text-sm font-black uppercase tracking-[0.12em] text-ink/70">{rec.expected_impact}</p>
+                ) : null}
                 <p className="mt-2 text-sm font-semibold text-ink/75">{rec.explanation}</p>
                 <p className="mt-2 text-xs font-black uppercase">Confidence {(rec.confidence * 100).toFixed(0)}%</p>
               </article>
