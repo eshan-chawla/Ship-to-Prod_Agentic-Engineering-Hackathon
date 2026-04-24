@@ -67,3 +67,35 @@ make api-test
 - Ghost.build/Postgres is configured through `DATABASE_URL`.
 - Redis queue/context logic is isolated in `apps/api/app/integrations/redis_context.py` and `apps/api/app/services/queues.py`.
 - Guild.ai is represented by `apps/api/app/integrations/governance.py`; it currently records to local DB tables and includes TODOs for real run tracking.
+
+## TinyFish Configuration
+
+Local mock mode is the default. If `TINYFISH_API_KEY` is empty, API and worker processes use `MockTinyFishProvider` and never call paid external APIs.
+
+Set these variables to enable real TinyFish calls:
+
+```bash
+TINYFISH_API_KEY=your_key_here
+TINYFISH_SEARCH_URL=https://api.search.tinyfish.ai
+TINYFISH_FETCH_URL=https://api.fetch.tinyfish.ai
+TINYFISH_AGENT_URL=https://agent.tinyfish.ai/v1/automation/run
+TINYFISH_TIMEOUT_SECONDS=20
+TINYFISH_MAX_RETRIES=2
+```
+
+Provider behavior:
+
+- `search_web(query)` calls TinyFish Search with `GET TINYFISH_SEARCH_URL?query=...`.
+- `fetch_url(url)` calls TinyFish Fetch with `POST TINYFISH_FETCH_URL` and `{"urls": [url], "format": "markdown"}`.
+- `browser_extract(url, task)` calls TinyFish Agent sync run with `POST TINYFISH_AGENT_URL`, `url`, `goal`, `browser_profile: lite`, and a structured output schema for price, stock, promo, and raw text.
+- All real calls use the `X-API-Key` header, retry `429` and `5xx` responses, retry transport timeouts, and emit structured logs.
+- Supplier and product scans store normalized TinyFish raw payloads in `evidence_items.raw_payload`.
+
+To test real mode locally:
+
+```bash
+cp .env.example .env
+# edit .env and set TINYFISH_API_KEY
+make up
+docker compose -f infra/docker-compose.yml exec api python -m app.scripts.seed
+```

@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.core.config import get_settings
 from app.integrations.governance import GovernanceRecorder
 from app.integrations.redis_context import RedisContext
-from app.integrations.tinyfish import TinyFishProviderInterface, get_tinyfish_provider
+from app.integrations.tinyfish import TinyFishProviderInterface, build_product_evidence_payload, get_tinyfish_provider
 from app.models.entities import CompetitorUrl, EvidenceItem, PriceObservation, PriceRecommendation, Product
 from app.services.scoring import recommend_price
 
@@ -56,15 +56,16 @@ def run_price_scan(
                     "promo_signal": observation.promo_signal,
                 }
             )
+            evidence_payload = build_product_evidence_payload(competitor.competitor_name, competitor.url, extracted)
             session.add(
                 EvidenceItem(
                     entity_type="product",
                     entity_id=product_id,
-                    source_url=competitor.url,
-                    source_title=f"{competitor.competitor_name} listing",
-                    content=extracted.get("raw_text", "Price extraction evidence."),
+                    source_url=evidence_payload["url"],
+                    source_title=evidence_payload["title"],
+                    content=evidence_payload["content"],
                     evidence_type="price_signal",
-                    raw_payload=extracted,
+                    raw_payload=evidence_payload["raw_payload"],
                 )
             )
 

@@ -5,7 +5,7 @@ from sqlmodel import Session
 from app.core.config import get_settings
 from app.integrations.governance import GovernanceRecorder
 from app.integrations.redis_context import RedisContext
-from app.integrations.tinyfish import TinyFishProviderInterface, get_tinyfish_provider
+from app.integrations.tinyfish import TinyFishProviderInterface, build_supplier_evidence_payload, get_tinyfish_provider
 from app.models.entities import Alert, EvidenceItem, Supplier, SupplierRiskScore, SupplierScan, SupplierSource
 from app.services.scoring import score_risk_evidence
 
@@ -59,25 +59,19 @@ def run_supplier_scan(
                 governance.record_tool_use(run.id, "tinyfish.fetch_url", {"url": result["url"]})
                 fetched = provider.fetch_url(result["url"])
                 redis_context.set_json(fetched_key, fetched, ttl_seconds=3600)
-            payload = {
-                "title": fetched.get("title") or result.get("title", "Untitled source"),
-                "content": fetched.get("content") or result.get("snippet", ""),
-                "snippet": result.get("snippet", ""),
-                "risk_factor": result.get("risk_factor"),
-                "url": result["url"],
-            }
+            payload = build_supplier_evidence_payload(result, fetched)
             evidence_payloads.append(payload)
             session.add(
                 EvidenceItem(
                     entity_type="supplier",
                     entity_id=supplier_id,
                     scan_id=scan.id,
-                    source_url=result["url"],
+                    source_url=payload["url"],
                     source_title=payload["title"],
                     content=payload["content"],
                     evidence_type="risk_signal",
                     risk_factor=payload["risk_factor"],
-                    raw_payload=payload,
+                    raw_payload=payload["raw_payload"],
                 )
             )
 
