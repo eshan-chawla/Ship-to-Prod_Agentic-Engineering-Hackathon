@@ -1,22 +1,31 @@
+"""Back-compat facade composing SemanticCache + AgentMemory.
+
+New code should import SemanticCache / AgentMemory directly from
+app.integrations.redis_layer.*. RedisContext remains for existing call sites.
+"""
 from __future__ import annotations
 
 import json
 from typing import Any
 from redis import Redis
 from redis.exceptions import RedisError
-from app.core.config import get_settings
+from app.integrations.redis_layer.agent_memory import AgentMemory
+from app.integrations.redis_layer.client import build_redis_client
+from app.integrations.redis_layer.semantic_cache import SemanticCache
 
 
 class RedisContext:
-    def __init__(self, redis_url: str | None = None) -> None:
-        self.client = Redis.from_url(redis_url or get_settings().redis_url, decode_responses=True)
+    def __init__(self, redis_url: str | None = None, client: Redis | None = None) -> None:
+        self.client = client or build_redis_client(redis_url)
+        self.cache = SemanticCache(client=self.client)
+        self.memory = AgentMemory(client=self.client)
 
     def get_json(self, key: str) -> Any | None:
         try:
-            value = self.client.get(key)
+            raw = self.client.get(key)
         except RedisError:
             return None
-        return json.loads(value) if value else None
+        return json.loads(raw) if raw else None
 
     def set_json(self, key: str, value: Any, ttl_seconds: int = 3600) -> None:
         try:
@@ -24,25 +33,23 @@ class RedisContext:
         except RedisError:
             return
 
+    def semantic_cache_lookup(self, namespace: str, query: str) -> Any | None:
+        return self.cache.get(namespace, query)
+
+    def semantic_cache_store(self, namespace: str, query: str, value: Any, ttl_seconds: int = 86400) -> None:
+        self.cache.set(namespace, query, value, ttl_seconds=ttl_seconds)
+
     def append_memory(self, entity_key: str, item: dict[str, Any]) -> None:
-        try:
-            self.client.lpush(f"memory:{entity_key}", json.dumps(item, default=str))
-            self.client.ltrim(f"memory:{entity_key}", 0, 19)
-        except RedisError:
-            return
+        if entity_key.startswith("supplier:"):
+            self.memory.record_supplier(int(entity_key.split(":", 1)[1]), item)
+        elif entity_key.startswith("product:"):
+            self.memory.record_product(int(entity_key.split(":", 1)[1]), item)
+        else:
+            self.memory._push(f"memory:{entity_key}", item, 20)
 
     def get_recent_memory(self, entity_key: str, limit: int = 5) -> list[dict[str, Any]]:
-        try:
-            values = self.client.lrange(f"memory:{entity_key}", 0, limit - 1)
-        except RedisError:
-            return []
-        return [json.loads(value) for value in values]
-
-    def semantic_cache_lookup(self, namespace: str, query: str) -> dict[str, Any] | None:
-        # Placeholder: replace with embedding similarity lookup backed by Redis vector search.
-        return self.get_json(f"semantic:{namespace}:{query.lower()}")
-
-    def semantic_cache_store(self, namespace: str, query: str, value: dict[str, Any]) -> None:
-        # Placeholder: store embeddings and metadata when Redis vector indexing is enabled.
-        self.set_json(f"semantic:{namespace}:{query.lower()}", value, ttl_seconds=86400)
-
+        if entity_key.startswith("supplier:"):
+            return self.memory.recent_supplier(int(entity_key.split(":", 1)[1]), limit)
+        if entity_key.startswith("product:"):
+            return self.memory.recent_product(int(entity_key.split(":", 1)[1]), limit)
+        return self.memory._read(f"memory:{entity_key}", limit)

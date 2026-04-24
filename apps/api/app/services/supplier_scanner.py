@@ -105,7 +105,10 @@ def run_supplier_scan(
         session.add(scan)
         session.commit()
         session.refresh(risk)
-        redis_context.append_memory(f"supplier:{supplier_id}", {"risk_score": risk.score, "scan_id": scan.id})
+        redis_context.memory.record_supplier(supplier_id, {"risk_score": risk.score, "scan_id": scan.id})
+        redis_context.memory.record_scan_summary(
+            {"kind": "supplier_scan", "entity_id": supplier_id, "score": risk.score, "scan_id": scan.id}
+        )
         governance.record_agent_run_end(run.id, "completed", f"Supplier risk score {risk.score}/100")
         session.refresh(risk)
         return risk

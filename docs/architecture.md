@@ -5,7 +5,7 @@ flowchart LR
   Web[Next.js Web App] --> API[FastAPI API]
   API --> PG[(Ghost.build / Postgres)]
   API --> Redis[(Redis)]
-  API --> Queue[Redis scan_jobs list]
+  API --> Queue[supplier_scan_jobs + price_scan_jobs]
   Worker[Python Worker] --> Queue
   Worker --> Redis
   Worker --> TinyFish[TinyFish Provider]
@@ -19,7 +19,7 @@ flowchart LR
 
 - Supplier Risk Radar manages suppliers, evidence, deterministic risk scoring, explanations, and threshold alerts.
 - Pricing & Promo Copilot manages products, competitor URLs, price observations, recommendation logic, and evidence-backed explanations.
-- Redis context engineering provides web result caching, short-term memory, semantic-cache placeholder methods, and queueing.
+- Redis context engineering provides a semantic cache (TTL + hit/miss logging), structured agent memory (per-supplier, per-product, recent scans), a retrieval context builder that assembles compact LLM/scoring input, and dedicated job queues (`supplier_scan_jobs`, `price_scan_jobs`). See [context-engineering.md](./context-engineering.md).
 - Governance records agent runs, steps, and tool use locally. TODO: forward run metadata to Guild.ai once credentials and API contracts are finalized.
 
 ## Data Boundary

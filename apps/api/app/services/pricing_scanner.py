@@ -79,7 +79,12 @@ def run_price_scan(
         session.add(recommendation)
         session.commit()
         session.refresh(recommendation)
-        redis_context.append_memory(f"product:{product_id}", {"recommendation": recommendation.action})
+        redis_context.memory.record_product(
+            product_id, {"recommendation": recommendation.action, "confidence": recommendation.confidence}
+        )
+        redis_context.memory.record_scan_summary(
+            {"kind": "price_scan", "entity_id": product_id, "action": recommendation.action}
+        )
         governance.record_agent_run_end(run.id, "completed", f"Pricing recommendation: {recommendation.action}")
         session.refresh(recommendation)
         return recommendation
